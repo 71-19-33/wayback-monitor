@@ -1,1 +1,50 @@
- 
+name: Wayback Monitor
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Wayback check
+        run: python check_wayback.py
+
+      - name: Commit state file if changed
+        run: |
+          if git status --porcelain | grep last_snapshot.json; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git add last_snapshot.json
+            git commit -m "Update latest Wayback snapshot"
+            git push
+          fi
+
+      - name: Open issue if snapshot changed
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          if git log -1 --pretty=%B | grep "Update latest Wayback snapshot"; then
+            gh issue create \
+              --title "New Wayback snapshot detected" \
+              --body "A new snapshot was added for **${{ github.repository }}**.\n\nCheck: https://web.archive.org/web/*/${{ github.repository }}"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
