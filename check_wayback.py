@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-URL = "example.com"
+URL = "adamleyshop.co.uk/collections/scarves"
 STATE_FILE = "last_snapshot.json"
 
 CDX_URL = (
